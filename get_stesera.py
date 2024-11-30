@@ -1,7 +1,5 @@
 import requests, json
 from bs4 import BeautifulSoup
-from io import BytesIO
-from base64 import b64encode
 
 URL = "https://www.staseraintv.com"
 
@@ -47,15 +45,14 @@ for i in range(1, 10):
 
             # get image
             image = soup2.select_one("html body div.container div.header div.maincolumn div.schedabox img")
-            image_url = URL + "/".join(continua["href"].split("/")[:-1]) + "/" + image["src"].removesuffix(" ")
-            imagefile = BytesIO()
-            img_stream = requests.get(image_url, stream=True)
-            if img_stream.ok:
-                for block in img_stream.iter_content(1024):
-                    if not block:
-                        break
-                    imagefile.write(block)
-            output["highlights"][canale]["image"] = b64encode(imagefile.getbuffer()).decode()
+            image_url = URL + "/".join(continua["href"].split("/")[:-1]).replace(" ", "") + "/" + image["src"].replace(" ", "")
+            try:
+                response = requests.get(image_url, stream=True).content
+                with open(f'./images/{canale}.jpg', 'wb') as f:
+                    f.write(response)
+            except:
+                output["highlights"][canale]["image"] = image_url
+
 
                 
 
