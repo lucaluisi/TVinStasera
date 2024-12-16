@@ -162,7 +162,4 @@ cython_debug/
 #.idea/
 
 
-stasera.json
-bot.session
-users.db
-images/*
+data/*

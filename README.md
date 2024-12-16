@@ -11,13 +11,13 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 ## Commands
 
 - `/start`: Register the user and start receiving notifications.
-- `/help`: Display help information about available commands.
 - `/cambio <ora>:<minuto>`: Change the notification time.
 - `/rottura`: Check the current notification time.
 - `/avast`: Stop receiving notifications.
 - `/riattiva`: Resume receiving notifications at the default time (14:00).
 - `/canale <numero>`: Get information about a specific channel.
 - `/set_blacklist`: Manage the blacklist of channels.
+- `/help`: Display help information about available commands.
 
 ## Setup
 

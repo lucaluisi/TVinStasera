@@ -1,5 +1,6 @@
 import threading
 from telethon import TelegramClient, events, Button
+from telethon.errors.rpcerrorlist import ButtonUrlInvalidError
 from datetime import datetime
 import asyncio
 import logging
@@ -8,11 +9,15 @@ import sqlite3
 import json
 import re
 
+# get stasera.json
+import get_stasera
+get_stasera.main()
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
 # Database connection
-conn = sqlite3.connect('users.db')
+conn = sqlite3.connect('./data/users.db')
 cursor = conn.cursor()
 
 # Create table
@@ -32,7 +37,7 @@ API_ID = os.environ.get('API_ID')
 API_HASH = os.environ.get('API_HASH')
 
 # Create the client and connect
-client = TelegramClient("./bot.session", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+client = TelegramClient("./data/bot.session", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
 # Poll and selected responses
 user_selections = {}
@@ -56,7 +61,8 @@ def update_blacklist(user_id, blacklist: list):
 
 # Update user notified in the database
 def update_notified(user_id, notified):
-    cursor.execute("UPDATE users SET notified=? WHERE user_id=?", (notified, user_id))
+    print(f"{notified = }")
+    cursor.execute("UPDATE users SET notified=? WHERE user_id=?", (str(int(notified)), user_id))
     conn.commit()
 
 def reset_notified_all():
@@ -113,29 +119,30 @@ async def help(event):
 
 
 async def send_tv_program(user_id):
-    with open("stasera.json", "r") as f:
+    with open("./data/stasera.json", "r") as f:
         stasera = json.load(f)
     
     for canale in get_user_blacklist(user_id):
         del stasera['highlights'][str(canale)]
     
-    for canale, info in stasera['highlights'].items():        
+    for canale, info in stasera['highlights'].items():
         caption = f"**{info['channel']}** - canale {canale}\n\n**{info['title']}**\n{info['description']}"
         
         buttons = []
         if info.get('info'):
             buttons.append(Button.inline('Info', f"info_{canale}"))
+        
         if info.get('trailer'):
             buttons.append(Button.url('Trailer', info['trailer']))
 
-        with info.get("image", open(f'./images/{canale}.jpg', 'rb')) as image:
+        with info.get("image", open(f'./data/images/{canale}.jpg', 'rb')) as image:
             if len(caption) > 1000:
                 await client.send_file(user_id, image)
                 await client.send_message(user_id, caption, buttons=buttons if buttons.__len__() > 0 else None)
             else:
                 await client.send_file(user_id, image, caption=caption, buttons=buttons if buttons.__len__() > 0 else None)
     
-    update_notified(user_id, True)
+    update_notified(user_id, 1)
 
 
 @client.on(events.CallbackQuery(pattern=r"info_\d+"))
@@ -146,7 +153,7 @@ async def callbackInfo(event):
 
 
 async def send_program_info(user_id, canale):
-    with open("stasera.json", "r") as f:
+    with open("./data/stasera.json", "r") as f:
         stasera = json.load(f)
     info: dict = stasera['highlights'].get(canale, None)
     assert info, f"Canale \"{canale}\" non trovato"
@@ -157,7 +164,7 @@ async def send_program_info(user_id, canale):
     if info.get('trailer'):
         buttons.append(Button.url('Trailer', info['trailer']))
 
-    with info.get("image", open(f'./images/{canale}.jpg', 'rb')) as image:
+    with info.get("image", open(f'./data/images/{canale}.jpg', 'rb')) as image:
         if len(caption) > 1000:
             await client.send_file(user_id, image)
             if info.get('info'):
@@ -178,9 +185,9 @@ async def cambio(event):
     try:
         _, notify_time = event.raw_text.split(' ', 1)
         update_notify_time(event.sender_id, notify_time)
-        update_notified(event.sender_id, False)
+        update_notified(event.sender_id, 0)
         await event.respond(f"Ora di rottura cambiata a {notify_time}")
-    except AssertionError:
+    except (AssertionError, ValueError) as e:
         await event.respond("Devi specificare l'ora in formato 'HH:MM'")
     logging.info(f'Change time command received from {event.sender_id}')
 
@@ -196,7 +203,7 @@ async def canale(event):
     try:
         _, canale = event.raw_text.split(' ', 1)
         await send_program_info(event.sender_id, canale)
-    except AssertionError as e:
+    except (AssertionError, ValueError) as e:
         await event.respond(str(e))
     logging.info(f'Channel info command received from {event.sender_id}')
 
@@ -269,7 +276,7 @@ async def confirm_poll(event):
 
 
 def get_all_channels():
-    with open("stasera.json", "r") as f:
+    with open("./data/stasera.json", "r") as f:
         stasera: dict = json.load(f)
 
     return zip((int(i) for i in stasera['highlights'].keys()), (info['channel'] for info in stasera['highlights'].values()))
