@@ -4,7 +4,7 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 
 ## Features
 
-- **Daily Notifications**: Users receive daily notifications about TV programs at their preferred time.
+- **Daily Notifications**: Users receive daily notifications about Italian TV programs at their preferred time.
 - **Blacklist Management**: Users can manage a blacklist of channels they don't want to receive notifications for.
 - **Program Information**: Users can get detailed information about specific TV programs, including descriptions, trailers, and images.
 
@@ -20,6 +20,8 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 - `/help`: Display help information about available commands.
 
 ## Setup
+
+### Local Setup
 
 1. Clone the repository:
     ```sh
@@ -45,6 +47,26 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
     python bot.py
     ```
 
+### Docker Setup
+
+1. Clone the repository:
+    ```sh
+    git clone <repository-url>
+    cd <repository-directory>
+    ```
+
+2. Create a `.env` file with the following content:
+    ```env
+    BOT_TOKEN=<your-telegram-bot-token>
+    API_ID=<your-telegram-api-id>
+    API_HASH=<your-telegram-api-hash>
+    ```
+
+3. Run Docker Compose:
+    ```sh
+    docker-compose up -d
+    ```
+
 ## Files
 
 - `bot.py`: Main bot implementation.
@@ -52,6 +74,8 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 - `canali.json`: JSON file containing channel information.
 - `stasera.json`: JSON file containing the fetched TV program data.
 - `requirements.txt`: List of required Python packages.
+- `Dockerfile`: Docker configuration file.
+- `docker-compose.yml`: Docker Compose configuration file.
 - `README.md`: Project documentation.
 
 ## get_stesera.py
