@@ -51,8 +51,8 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 
 1. Clone the repository:
     ```sh
-    git clone <repository-url>
-    cd <repository-directory>
+    git clone https://github.com/lucaluisi/TVinStasera.git
+    cd TVinStasera/
     ```
 
 2. Create a `.env` file with the following content:
@@ -80,7 +80,13 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 
 ## get_stesera.py
 
-The `get_stesera.py` script scrapes the website "staseraintv.com" to fetch TV program data for various Italian channels. It collects information such as the title, description, additional info, trailer link, and image for each TV program. The data is then saved to `stasera.json` for use by the Telegram bot.
+The `get_stesera.py` script scrapes the website "staseraintv.com" to fetch TV program data for various Italian channels. It performs the following steps:
+
+1. Loads channel information from `canali.json`.
+2. Iterates through multiple pages of the website to gather TV program data.
+3. For each channel, it fetches the program details including the title, description, and additional information.
+4. Fetches images for the programs from another website, "superguidatv.it".
+5. Saves the collected data to `stasera.json` for use by the Telegram bot.
 
 ## License
 

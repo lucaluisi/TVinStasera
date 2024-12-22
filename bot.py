@@ -1,6 +1,5 @@
 import threading
 from telethon import TelegramClient, events, Button
-from telethon.errors.rpcerrorlist import ButtonUrlInvalidError
 from datetime import datetime
 import asyncio
 import logging
@@ -10,8 +9,8 @@ import json
 import re
 
 # get stasera.json
-import get_stasera
-get_stasera.main()
+# import get_stasera
+# get_stasera.main()
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -119,30 +118,28 @@ async def help(event):
 
 
 async def send_tv_program(user_id):
-    with open("./data/stasera.json", "r") as f:
-        stasera = json.load(f)
-    
-    for canale in get_user_blacklist(user_id):
-        del stasera['highlights'][str(canale)]
-    
-    for canale, info in stasera['highlights'].items():
-        caption = f"**{info['channel']}** - canale {canale}\n\n**{info['title']}**\n{info['description']}"
+    try:
+        with open("./data/stasera.json", "r") as f:
+            stasera = json.load(f)
         
-        buttons = []
-        if info.get('info'):
-            buttons.append(Button.inline('Info', f"info_{canale}"))
+        for canale in get_user_blacklist(user_id):
+            del stasera['highlights'][str(canale)]
         
-        if info.get('trailer'):
-            buttons.append(Button.url('Trailer', info['trailer']))
+        for canale, info in stasera['highlights'].items():
+            caption = f"**{info['channel']}** - canale {canale}\n\n**{info['title']}**\n{info['description'][:500]}{'...' if len(info['description']) > 510 else ''}"
+            
+            buttons = []
+            if info.get('info') or len(info['description']) > 510:
+                buttons.append(Button.inline('Info', f"info_{canale}"))
+            
+            if info.get('trailer'):
+                buttons.append(Button.url('Trailer', info['trailer']))
 
-        with info.get("image", open(f'./data/images/{canale}.jpg', 'rb')) as image:
-            if len(caption) > 1000:
-                await client.send_file(user_id, image)
-                await client.send_message(user_id, caption, buttons=buttons if buttons.__len__() > 0 else None)
-            else:
+            with open(f'./data/images/{canale}.jpg', 'rb') as image:
                 await client.send_file(user_id, image, caption=caption, buttons=buttons if buttons.__len__() > 0 else None)
-    
-    update_notified(user_id, 1)
+    except Exception as e:
+        logging.error(f"Error sending TV program to {user_id}: {e}")
+    update_notified(user_id, True)
 
 
 @client.on(events.CallbackQuery(pattern=r"info_\d+"))
@@ -164,28 +161,20 @@ async def send_program_info(user_id, canale):
     if info.get('trailer'):
         buttons.append(Button.url('Trailer', info['trailer']))
 
-    with info.get("image", open(f'./data/images/{canale}.jpg', 'rb')) as image:
-        if len(caption) > 1000:
-            await client.send_file(user_id, image)
-            if info.get('info'):
-                await client.send_message(user_id, caption)
-                await client.send_message(user_id, info['info'], buttons=buttons if buttons.__len__() > 0 else None)
-            else:
-                await client.send_message(user_id, caption, buttons=buttons if buttons.__len__() > 0 else None)
+    with open(f'./data/images/{canale}.jpg', 'rb') as image:
+        await client.send_file(user_id, image)
+        if info.get('info'):
+            await client.send_message(user_id, caption)
+            await client.send_message(user_id, info['info'], buttons=buttons if buttons.__len__() > 0 else None)
         else:
-            if info.get('info'):
-                await client.send_file(user_id, image, caption=caption)
-                await client.send_message(user_id, info['info'], buttons=buttons if buttons.__len__() > 0 else None)
-            else:
-                await client.send_file(user_id, image, caption=caption, buttons=buttons if buttons.__len__() > 0 else None)
-
+            await client.send_message(user_id, caption, buttons=buttons if buttons.__len__() > 0 else None)
 
 @client.on(events.NewMessage(pattern='/cambio'))
 async def cambio(event):
     try:
         _, notify_time = event.raw_text.split(' ', 1)
         update_notify_time(event.sender_id, notify_time)
-        update_notified(event.sender_id, 0)
+        update_notified(event.sender_id, False)
         await event.respond(f"Ora di rottura cambiata a {notify_time}")
     except (AssertionError, ValueError) as e:
         await event.respond("Devi specificare l'ora in formato 'HH:MM'")
@@ -203,8 +192,10 @@ async def canale(event):
     try:
         _, canale = event.raw_text.split(' ', 1)
         await send_program_info(event.sender_id, canale)
-    except (AssertionError, ValueError) as e:
+    except AssertionError as e:
         await event.respond(str(e))
+    except ValueError:
+        await event.respond(f"Devi specificare il numero del canale cazzo: /canale <numero>")
     logging.info(f'Channel info command received from {event.sender_id}')
 
 
