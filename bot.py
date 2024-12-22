@@ -9,8 +9,8 @@ import json
 import re
 
 # get stasera.json
-# import get_stasera
-# get_stasera.main()
+import get_stasera
+get_stasera.main()
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
