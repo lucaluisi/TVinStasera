@@ -7,6 +7,7 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 - **Daily Notifications**: Users receive daily notifications about Italian TV programs at their preferred time.
 - **Blacklist Management**: Users can manage a blacklist of channels they don't want to receive notifications for.
 - **Program Information**: Users can get detailed information about specific TV programs, including descriptions, trailers, and images.
+- **Preferences Management**: Users can add or remove preferences for specific TV programs.
 
 ## Commands
 
@@ -17,6 +18,8 @@ This project is a Telegram bot that notifies users about Italian TV programs sch
 - `/riattiva`: Resume receiving notifications at the default time (14:00).
 - `/canale <numero>`: Get information about a specific channel.
 - `/set_blacklist`: Manage the blacklist of channels.
+- `/add_prefe`: Add a preference for specific TV programs.
+- `/rem_prefe`: Remove a preference for specific TV programs.
 - `/help`: Display help information about available commands.
 
 ## Setup

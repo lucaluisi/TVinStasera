@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
     notify_time TEXT DEFAULT "14:00",
     notified BOOLEAN DEFAULT 0,
-    blacklist TEXT DEFAULT "[]"
+    blacklist TEXT DEFAULT "[]",
+    preferences TEXT DEFAULT "[]"
 )
 ''')
 conn.commit()
@@ -58,9 +59,14 @@ def update_blacklist(user_id, blacklist: list):
     cursor.execute("UPDATE users SET blacklist=? WHERE user_id=?", (blacklist, user_id))
     conn.commit()
 
+# Update user preferences in the database
+def update_preferences(user_id, preferences: list):
+    preferences = json.dumps(sorted(preferences))
+    cursor.execute("UPDATE users SET preferences=? WHERE user_id=?", (preferences, user_id))
+    conn.commit()
+
 # Update user notified in the database
 def update_notified(user_id, notified):
-    print(f"{notified = }")
     cursor.execute("UPDATE users SET notified=? WHERE user_id=?", (str(int(notified)), user_id))
     conn.commit()
 
@@ -70,21 +76,25 @@ def reset_notified_all():
 
 # Get all users from the database
 def get_users():
-    cursor.execute("SELECT * FROM users WHERE notify_time != '-1'")
+    cursor.execute("SELECT user_id, notify_time, notified FROM users WHERE notify_time != '-1'")
     return cursor.fetchall()
 
 # Get a specific user from the database
 def get_user(user_id):
-    cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
+    cursor.execute("SELECT notify_time, notified, blacklist, preferences FROM users WHERE user_id=?", (user_id,))
     return cursor.fetchone()
 
 # Get the blacklist of a user
 def get_user_blacklist(user_id):
+    return json.loads(get_user(user_id)[2])
+
+# Get the preferences of a user
+def get_user_preferences(user_id):
     return json.loads(get_user(user_id)[3])
 
 # Get the notify time of a user
 def get_user_notify_time(user_id):
-    return get_user(user_id)[1]
+    return get_user(user_id)[0]
 
 # Delete a user from the database
 def delete_user(user_id):
@@ -111,6 +121,8 @@ async def help(event):
         "`/riattiva`  ti rompo di nuovo i coglioni\n"
         "`/canale <numero>`  mostra il programma del canale selezionato\n"
         "`/set_blacklist`  definisce i canali che non vuoi essere rotto i coglioni\n"
+        "`/add_prefe`  aggiunge un programma alle preferenze\n"
+        "`/rem_prefe`  rimuove un programma dalle preferenze\n"
         "`/help`  sono io"
     )
     await event.respond(help_text)
@@ -118,25 +130,38 @@ async def help(event):
 
 
 async def send_tv_program(user_id):
+
+    async def send_program(canale, info):
+        caption = f"**{info['channel']}** - canale {canale}\n\n**{info['title']}**\n{info['description'][:500]}{'...' if len(info['description']) > 510 else ''}"
+        
+        buttons = []
+        if info.get('info') or len(info['description']) > 510:
+            buttons.append(Button.inline('Info', f"info_{canale}"))
+        
+        if info.get('trailer'):
+            buttons.append(Button.url('Trailer', info['trailer']))
+
+        with open(f'./data/images/{canale}.jpg', 'rb') as image:
+            await client.send_file(user_id, image, caption=caption, buttons=buttons if buttons.__len__() > 0 else None)
+    
     try:
         with open("./data/stasera.json", "r") as f:
             stasera = json.load(f)
         
         for canale in get_user_blacklist(user_id):
-            del stasera['highlights'][str(canale)]
+            if any(pref.lower() in stasera['highlights'][str(canale)]['title'].lower() for pref in get_user_preferences(user_id)):
+                continue
+            else:
+                del stasera['highlights'][str(canale)]
         
+        for canale, info in stasera['highlights'].copy().items():
+            if any(pref.lower() in info['title'].lower() for pref in get_user_preferences(user_id)):
+                await send_program(canale, info)
+                del stasera['highlights'][canale]
+                
         for canale, info in stasera['highlights'].items():
-            caption = f"**{info['channel']}** - canale {canale}\n\n**{info['title']}**\n{info['description'][:500]}{'...' if len(info['description']) > 510 else ''}"
-            
-            buttons = []
-            if info.get('info') or len(info['description']) > 510:
-                buttons.append(Button.inline('Info', f"info_{canale}"))
-            
-            if info.get('trailer'):
-                buttons.append(Button.url('Trailer', info['trailer']))
+            await send_program(canale, info)
 
-            with open(f'./data/images/{canale}.jpg', 'rb') as image:
-                await client.send_file(user_id, image, caption=caption, buttons=buttons if buttons.__len__() > 0 else None)
     except Exception as e:
         logging.error(f"Error sending TV program to {user_id}: {e}")
     update_notified(user_id, True)
@@ -144,7 +169,7 @@ async def send_tv_program(user_id):
 
 @client.on(events.CallbackQuery(pattern=r"info_\d+"))
 async def callbackInfo(event):
-    canale = event.data.decode().split("_")[1]  # Estrai il canale
+    canale = event.data.decode().split("_")[1]  # Extract the channel
     await send_program_info(event.sender_id, canale)
     await event.answer()
 
@@ -266,6 +291,63 @@ async def confirm_poll(event):
     await event.answer()
 
 
+# Dictionary to store the state of each user
+user_states = {}
+WAITING_FOR = "waiting_for"
+
+@client.on(events.NewMessage(pattern='/add_prefe'))
+async def add_prefe(event):
+    user_id = event.sender_id
+    user_states[user_id] = WAITING_FOR
+    await event.respond("Scrivi il nome del programma che vuoi aggiungere alle preferenze")
+    await event.respond("PS: selezioneremo solo i programmi il cui nome è composto anche in parte da quello che hai scritto")
+    await event.respond("esempio:\nSe scrivi 'grande fratello' verranno selezionati 'grande fratello vip', 'grande fratello 2021' ecc.")
+    logging.info(f'Add preference command received from {user_id}')
+
+@client.on(events.NewMessage(func=lambda event: user_states.get(event.sender_id) == WAITING_FOR and not event.message.text.startswith('/')))
+async def add_preference(event):
+    user_id = event.sender_id
+    if user_states.get(user_id) == WAITING_FOR:
+        preferences = get_user_preferences(user_id)
+        preferences.append(event.message.text)
+        update_preferences(user_id, preferences)
+        user_states.pop(user_id)
+        await event.respond("Programma aggiunto alle preferenze")
+        logging.info(f'Preference added by {user_id}')
+
+
+@client.on(events.NewMessage(pattern='/rem_prefe'))
+async def rem_prefe(event):
+    user_id = event.sender_id
+    user_states[user_id] = WAITING_FOR
+    preferences = get_user_preferences(user_id)
+    if not preferences:
+        await event.respond("Non hai preferenze da rimuovere")
+        return
+    message = "Scegli la preferenza da rimuovere:\n"
+    buttons = [[]]
+    bi = 0
+    for i, pref in enumerate(preferences):
+        message += f"{i + 1}. {pref}\n"
+        buttons[bi].append(Button.inline(str(i + 1), f"remove_{i}".encode()))
+        if (i+1) % 3 == 0:
+            bi += 1
+            buttons.append([])
+    await event.respond(message, buttons=buttons)
+    logging.info(f'Remove preference command received from {user_id}')
+
+@client.on(events.CallbackQuery(pattern=r"remove_\d+"))
+async def remove_preference(event):
+    user_id = event.sender_id
+    pref_index = int(event.data.decode().split("_")[1])
+    preferences = get_user_preferences(user_id)
+    preferences.pop(pref_index)
+    update_preferences(user_id, preferences)
+    await event.edit("Preferenza rimossa")
+    await event.answer()
+    logging.info(f'Preference removed by {user_id}')
+
+
 def get_all_channels():
     with open("./data/stasera.json", "r") as f:
         stasera: dict = json.load(f)
@@ -289,7 +371,7 @@ async def schedule_notifications():
     loop = asyncio.get_event_loop()
     while True:
         now = datetime.now()
-        for user_id, target_time, notified, _ in get_users():
+        for user_id, target_time, notified in get_users():
             target_hour, target_minute = map(int, target_time.split(':'))
 
             if now.hour == target_hour and target_minute <= now.minute < target_minute + 10 and not notified:
