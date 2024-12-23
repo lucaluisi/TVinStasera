@@ -97,7 +97,7 @@ def delete_user(user_id):
 async def start(event):
     add_user(event.sender_id)
     await event.respond("Ciao uagliò! Ti romperò i coglioni tutti i giorni alle 14:00!\nMi raccomando aggiusta la blacklist dei canali che non vuoi vedere se no ti arriva un sacco di merda.")
-    await event.respond("Fai il comando /help per vedere che cazzo puoi farmi.")
+    await help(event)
     logging.info(f'Start command received from {event.sender_id}')
     
 

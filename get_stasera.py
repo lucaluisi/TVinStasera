@@ -1,8 +1,11 @@
 import requests, json
 from bs4 import BeautifulSoup
-import re
+import re, os
 
 def main():
+    if not os.path.exists("./data/images/"):
+        os.makedirs("./data/images/")
+
     URL = "https://www.staseraintv.com"
 
     output = {"highlights": {}}
@@ -40,8 +43,10 @@ def main():
 
                 # get trailer link
                 link_trailer = soup2.select_one("div.video-container iframe")
-                if link_trailer != None and re.match(r"(https|http):\/\/www\.youtube\.com\/embed\/(\w{11}).*", link_trailer['src']):
-                    output["highlights"][canale]["trailer"] = link_trailer["src"]
+                if link_trailer != None and re.match(r"(http:|https:|)\/\/www\.youtube\.com\/.*", link_trailer['src']):
+                    src = link_trailer['src']
+                    src = src if src.startswith("https:") else "https:" + src
+                    output["highlights"][canale]["trailer"] = src
 
                 # get channel name
                 output["highlights"][canale]["channel"] = canali[str(canale)]
