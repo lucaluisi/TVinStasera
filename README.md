@@ -2,6 +2,8 @@
 
 This project is a Telegram bot that notifies users about Italian TV programs scheduled for the day. Users can set notification times, manage a blacklist of channels they don't want to receive notifications for, and get detailed information about specific TV programs.
 
+You can interact with the bot on Telegram at [@TVinStasera_bot](https://t.me/TVinStasera_bot).
+
 ## Features
 
 - **Daily Notifications**: Users receive daily notifications about Italian TV programs at their preferred time.
