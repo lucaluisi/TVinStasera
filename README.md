@@ -45,6 +45,7 @@ You can interact with the bot on Telegram at [@TVinStasera_bot](https://t.me/TVi
     BOT_TOKEN=<your-telegram-bot-token>
     API_ID=<your-telegram-api-id>
     API_HASH=<your-telegram-api-hash>
+    DIR=/usr/src/app
     ```
 
 4. Run the bot:
@@ -65,6 +66,7 @@ You can interact with the bot on Telegram at [@TVinStasera_bot](https://t.me/TVi
     BOT_TOKEN=<your-telegram-bot-token>
     API_ID=<your-telegram-api-id>
     API_HASH=<your-telegram-api-hash>
+    DIR=/usr/src/app
     ```
 
 3. Run Docker Compose:
@@ -81,6 +83,8 @@ You can interact with the bot on Telegram at [@TVinStasera_bot](https://t.me/TVi
 - `requirements.txt`: List of required Python packages.
 - `Dockerfile`: Docker configuration file.
 - `docker-compose.yml`: Docker Compose configuration file.
+- `start.sh`: Script to start the bot and cron job.
+- `.env.example`: Example environment variables file.
 - `README.md`: Project documentation.
 
 ## get_stesera.py

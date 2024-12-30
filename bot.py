@@ -15,8 +15,15 @@ get_stasera.main()
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
+# Your API ID and hash from my.telegram.org
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
+API_ID = os.environ.get('API_ID')
+API_HASH = os.environ.get('API_HASH')
+
+DIR = os.environ.get('DIR', '/usr/src/app')
+
 # Database connection
-conn = sqlite3.connect('./data/users.db')
+conn = sqlite3.connect(f'{DIR}/data/users.db')
 cursor = conn.cursor()
 
 # Create table
@@ -31,13 +38,8 @@ CREATE TABLE IF NOT EXISTS users (
 ''')
 conn.commit()
 
-# Your API ID and hash from my.telegram.org
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
-API_ID = os.environ.get('API_ID')
-API_HASH = os.environ.get('API_HASH')
-
 # Create the client and connect
-client = TelegramClient("./data/bot.session", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+client = TelegramClient(f"{DIR}/data/bot.session", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
 # Poll and selected responses
 user_selections = {}
@@ -141,11 +143,11 @@ async def send_tv_program(user_id):
         if info.get('trailer'):
             buttons.append(Button.url('Trailer', info['trailer']))
 
-        with open(f'./data/images/{canale}.jpg', 'rb') as image:
+        with open(f'{DIR}/data/images/{canale}.jpg', 'rb') as image:
             await client.send_file(user_id, image, caption=caption, buttons=buttons if buttons.__len__() > 0 else None)
     
     try:
-        with open("./data/stasera.json", "r") as f:
+        with open(f"{DIR}/data/stasera.json", "r") as f:
             stasera = json.load(f)
         
         for canale in get_user_blacklist(user_id):
@@ -175,7 +177,7 @@ async def callbackInfo(event):
 
 
 async def send_program_info(user_id, canale):
-    with open("./data/stasera.json", "r") as f:
+    with open(f"{DIR}/data/stasera.json", "r") as f:
         stasera = json.load(f)
     info: dict = stasera['highlights'].get(canale, None)
     assert info, f"Canale \"{canale}\" non trovato"
@@ -186,7 +188,7 @@ async def send_program_info(user_id, canale):
     if info.get('trailer'):
         buttons.append(Button.url('Trailer', info['trailer']))
 
-    with open(f'./data/images/{canale}.jpg', 'rb') as image:
+    with open(f'{DIR}/data/images/{canale}.jpg', 'rb') as image:
         await client.send_file(user_id, image)
         if info.get('info'):
             await client.send_message(user_id, caption)
@@ -349,7 +351,7 @@ async def remove_preference(event):
 
 
 def get_all_channels():
-    with open("./data/stasera.json", "r") as f:
+    with open(f"{DIR}/data/stasera.json", "r") as f:
         stasera: dict = json.load(f)
 
     return zip((int(i) for i in stasera['highlights'].keys()), (info['channel'] for info in stasera['highlights'].values()))

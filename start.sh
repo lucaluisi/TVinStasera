@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python -u bot.py &
+python -u /usr/src/app/bot.py &
 
 cron -f &
 

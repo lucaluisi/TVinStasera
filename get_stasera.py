@@ -2,16 +2,18 @@ import requests, json
 from bs4 import BeautifulSoup
 import re, os
 
+DIR = os.environ.get("DIR", f"/usr/src/app")
+
 def main():
-    if not os.path.exists("./data/images/"):
-        os.makedirs("./data/images/")
+    if not os.path.exists(f"{DIR}/data/images/"):
+        os.makedirs(f"{DIR}/data/images/")
 
     URL = "https://www.staseraintv.com"
 
     output = {"highlights": {}}
     backup_images = {}
 
-    with open("canali.json", "r") as canali_file:
+    with open(f"{DIR}/canali.json", "r") as canali_file:
         canali = json.load(canali_file)
     for i in range(1, 10):
         page = requests.get(f"{URL}/index{i}.html").content
@@ -80,12 +82,12 @@ def main():
                     raise Exception("No image")
                 image_url = image.split("?")[0] + "?width=480"
                 response_image = requests.get(image_url, stream=True).content
-                with open(f'./data/images/{canale}.jpg', 'wb') as f:
+                with open(f'{DIR}/data/images/{canale}.jpg', 'wb') as f:
                     f.write(response_image)
             except:
                 try:
                     response_image = requests.get(backup_images[int(canale)], stream=True).content
-                    with open(f'./data/images/{canale}.jpg', 'wb') as f:
+                    with open(f'{DIR}/data/images/{canale}.jpg', 'wb') as f:
                         f.write(response_image)
                 except:
                     print(f"Error downloading image for {canale}")
@@ -95,7 +97,7 @@ def main():
 
     output["highlights"] = dict(sorted(output["highlights"].items()))
 
-    output_file = open("./data/stasera.json", "w")
+    output_file = open(f"{DIR}/data/stasera.json", "w")
     output_file.write(json.dumps(output))
     output_file.close()
 
